@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Inicio de sesión del catálogo de videojuegos.">
+<title>Iniciar sesión · Catálogo de Videojuegos</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23040504'/%3E%3Cpath d='M4 4h24v18l-8 8H4z' fill='%2376b900'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+
+<header class="cabecera">
+  <div class="envoltura cabecera__barra">
+    <a class="marca" href="/index.html">
+      <span class="marca__glifo">▶</span>
+      <span class="marca__texto">Catálogo<span>Videojuegos</span></span>
+    </a>
+    <button class="menu-boton" aria-label="Abrir menú"><span></span><span></span><span></span></button>
+    <nav class="nav">
+      <a href="index.html">Inicio</a>
+      <a href="juegos.html">Juegos</a>
+      <a href="estudios.html">Estudios</a>
+      <a href="plataformas.html">Plataformas</a>
+      <a href="/api" target="_blank" rel="noopener">API</a>
+    </nav>
+  </div>
+</header>
+
+<main id="app" class="envoltura acceso" v-cloak>
+  <div class="acceso__tarjeta aparece">
+    <p class="etiqueta-seccion">POST /api/auth/login</p>
+    <h1>Iniciar sesión</h1>
+    <p class="texto-tenue" style="margin:0">Necesitas una cuenta para crear y editar registros del catálogo.</p>
+
+    <div class="acceso__aviso" v-if="motivo === 'expirada'">Tu sesión expiró. Vuelve a iniciar sesión para continuar.</div>
+    <div class="acceso__aviso" v-else-if="motivo === 'requerida'">Esa acción requiere iniciar sesión.</div>
+    <div class="acceso__aviso" v-if="sesionActiva">Ya tienes una sesión abierta como <b>{{ sesionActiva.nombre }}</b>.</div>
+
+    <form @submit.prevent="enviar" novalidate>
+      <div class="alerta" v-if="errores.length">
+        <strong>No se pudo iniciar sesión.</strong>
+        <ul><li v-for="(e, i) in errores" :key="i">{{ e }}</li></ul>
+      </div>
+      <div>
+        <label class="etiqueta" for="correo">Correo</label>
+        <input id="correo" class="campo" type="email" v-model.trim="correo" autocomplete="email" placeholder="tu@correo.com" autofocus>
+      </div>
+      <div>
+        <label class="etiqueta" for="clave">Contraseña</label>
+        <input id="clave" class="campo" type="password" v-model="clave" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button class="boton boton--solido" type="submit" :disabled="enviando">{{ enviando ? 'Validando…' : 'Entrar' }}</button>
+    </form>
+
+    <p class="acceso__pie">¿No tienes cuenta? <a :href="'registro.html' + sufijo">Regístrate</a></p>
+  </div>
+</main>
+
+<footer class="pie">
+  <div class="envoltura pie__contenido">
+    <span>Autenticación con JSON Web Tokens</span>
+    <span>Contraseñas con bcrypt · Token con expiración</span>
+    <a class="separa" href="/api" target="_blank" rel="noopener">Documentación de la API →</a>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>window.Vue || document.write('<script src="/js/vendor/vue.global.prod.js"><\/script>');</script>
+<script src="/js/comun.js"></script>
+<script src="/js/acceso.js"></script>
+<script>
+Vue.createApp({
+  data() {
+    return { correo: '', clave: '', errores: [], enviando: false,
+             motivo: parametroUrl('motivo'), sesionActiva: Sesion.usuario(), sufijo: location.search };
+  },
+  methods: {
+    async enviar() {
+      this.errores = [];
+      if (!this.correo || !this.clave) { this.errores = ['Escribe tu correo y tu contraseña.']; return; }
+      this.enviando = true;
+      try {
+        const respuesta = await API.login(this.correo, this.clave);
+        Sesion.guardar(respuesta);                 // guarda el JWT en el navegador
+        avisar(`Bienvenido, ${respuesta.usuario.nombre}.`);
+        setTimeout(() => location.assign(destinoTrasAcceso()), 600);
+      } catch (e) {
+        this.errores = e.detalles?.length ? e.detalles : [e.message];
+      } finally {
+        this.enviando = false;
+      }
+    },
+  },
+}).mount('#app');
+</script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Listado, alta, edición y borrado de videojuegos del catálogo.">
+<title>Juegos · Catálogo de Videojuegos</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23040504'/%3E%3Cpath d='M4 4h24v18l-8 8H4z' fill='%2376b900'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/css/estilos.css">
+</head>
+<!-- Con portadas reales de RAWG, cambia esta línea por: <body class="apaisado"> -->
+<!--<body> -->
+<body class="apaisado">
+
+<header class="cabecera">
+  <div class="envoltura cabecera__barra">
+    <a class="marca" href="/index.html">
+      <span class="marca__glifo">▶</span>
+      <span class="marca__texto">Catálogo<span>Videojuegos</span></span>
+    </a>
+    <button class="menu-boton" aria-label="Abrir menú"><span></span><span></span><span></span></button>
+    <nav class="nav">
+      <a href="index.html">Inicio</a>
+      <a href="juegos.html">Juegos</a>
+      <a href="estudios.html">Estudios</a>
+      <a href="plataformas.html">Plataformas</a>
+      <a href="/api" target="_blank" rel="noopener">API</a>
+    </nav>
+  </div>
+</header>
+
+<main id="app" class="envoltura" v-cloak>
+
+  <section class="seccion">
+    <div class="fila-titulo">
+      <div>
+        <p class="etiqueta-seccion">Entidad principal · /api/juegos</p>
+        <h1 class="titulo-seccion">Juegos</h1>
+        <p class="texto-tenue" style="margin:0;max-width:52ch">
+          Cada juego apunta a un estudio y a una plataforma. Abre una ficha para saltar a sus relaciones.
+        </p>
+      </div>
+      <button v-if="sesion.autenticado" class="boton boton--solido separa" @click="abrirCreacion">+ Nuevo juego</button>
+      <a v-else class="boton separa" href="login.html">Inicia sesión para editar</a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="herramientas">
+      <div class="buscador">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+        </svg>
+        <input class="campo" type="search" v-model="filtros.buscar" @input="buscarConRetardo"
+               placeholder="Buscar por título, género o descripción" aria-label="Buscar juegos">
+      </div>
+
+      <div class="selector">
+        <select class="campo" v-model="filtros.genero" @change="recargar" aria-label="Filtrar por género">
+          <option value="">Todos los géneros</option>
+          <option v-for="g in generos" :key="g" :value="g">{{ g }}</option>
+        </select>
+      </div>
+
+      <div class="selector">
+        <select class="campo" v-model="filtros.estudio_id" @change="recargar" aria-label="Filtrar por estudio">
+          <option value="">Todos los estudios</option>
+          <option v-for="e in estudios" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+        </select>
+      </div>
+
+      <div class="selector">
+        <select class="campo" v-model="filtros.plataforma_id" @change="recargar" aria-label="Filtrar por plataforma">
+          <option value="">Todas las plataformas</option>
+          <option v-for="p in plataformas" :key="p.id" :value="p.id">{{ p.nombre }}</option>
+        </select>
+      </div>
+
+      <div class="selector">
+        <select class="campo" v-model="orden" @change="recargar" aria-label="Ordenar">
+          <option value="titulo:asc">Título A–Z</option>
+          <option value="calificacion:desc">Mejor valorados</option>
+          <option value="anio:desc">Más recientes</option>
+          <option value="anio:asc">Más antiguos</option>
+          <option value="precio:asc">Precio más bajo</option>
+          <option value="precio:desc">Precio más alto</option>
+        </select>
+      </div>
+
+      <button v-if="hayFiltros" class="boton boton--fantasma boton--pequeno" @click="limpiarFiltros">Limpiar</button>
+
+      <p class="contador"><b>{{ total }}</b> resultado{{ total === 1 ? '' : 's' }}</p>
+    </div>
+
+    <!-- Rejilla -->
+    <div class="rejilla">
+      <template v-if="cargando">
+        <div class="esqueleto" v-for="n in 10" :key="'e' + n">
+          <div class="esqueleto__bloque"></div>
+          <div class="esqueleto__linea"></div>
+          <div class="esqueleto__linea"></div>
+        </div>
+      </template>
+
+      <div v-else-if="!juegos.length" class="vacio">
+        <h3>Sin resultados</h3>
+        <p v-if="hayFiltros">Ningún juego coincide con los filtros aplicados. Prueba a ampliar la búsqueda.</p>
+        <p v-else>El catálogo está vacío. Añade el primer juego para empezar.</p>
+        <button v-if="hayFiltros" class="boton" @click="limpiarFiltros">Quitar filtros</button>
+        <button v-else-if="sesion.autenticado" class="boton boton--solido" @click="abrirCreacion">+ Nuevo juego</button>
+      </div>
+
+      <article v-else v-for="(j, i) in juegos" :key="j.id"
+               class="tarjeta aparece" :style="{ animationDelay: Math.min(i, 12) * 55 + 'ms' }"
+               tabindex="0" role="button" :aria-label="'Ver ficha de ' + j.titulo"
+               @click="verFicha(j)" @keydown.enter="verFicha(j)">
+        <div class="tarjeta__lienzo">
+          <img :src="j.imagen || ''" :alt="j.titulo" loading="lazy" @error="imagenAlterna($event, j.titulo)">
+          <span v-if="j.calificacion !== null" class="tarjeta__nota">{{ j.calificacion }}</span>
+        </div>
+        <div class="tarjeta__cuerpo">
+          <h3 class="tarjeta__titulo">{{ j.titulo }}</h3>
+          <div class="tarjeta__meta">
+            <span>{{ j.anio }}</span>
+            <span>{{ j.genero }}</span>
+          </div>
+          <div class="tarjeta__meta" style="margin-top:.55rem">
+            <span class="insignia">{{ j.plataforma ? j.plataforma.nombre : 'Sin plataforma' }}</span>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <!-- Paginación -->
+    <div class="paginacion" v-if="paginas > 1">
+      <button class="boton boton--fantasma boton--pequeno" :disabled="pagina <= 1" @click="irA(pagina - 1)">← Anterior</button>
+      <span>Página {{ pagina }} de {{ paginas }}</span>
+      <button class="boton boton--fantasma boton--pequeno" :disabled="pagina >= paginas" @click="irA(pagina + 1)">Siguiente →</button>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------- -->
+  <!--  Ficha del juego                                            -->
+  <!-- ---------------------------------------------------------- -->
+  <div class="capa" v-if="ficha" @click.self="ficha = null" @keydown.esc="ficha = null">
+    <div class="dialogo dialogo--ancho" role="dialog" aria-modal="true">
+      <div class="dialogo__cabecera">
+        <div>
+          <p class="dialogo__sub">Juego · id {{ ficha.id }}</p>
+          <h2 class="dialogo__titulo">{{ ficha.titulo }}</h2>
+        </div>
+        <button class="cerrar" @click="ficha = null" aria-label="Cerrar ficha">✕</button>
+      </div>
+
+      <div class="dialogo__cuerpo">
+        <div class="detalle">
+          <div>
+            <img class="detalle__imagen" :src="ficha.imagen || ''" :alt="ficha.titulo"
+                 @error="imagenAlterna($event, ficha.titulo)">
+          </div>
+          <div>
+            <p class="texto">{{ ficha.descripcion || 'Este registro todavía no tiene descripción.' }}</p>
+
+            <div class="ficha">
+              <div class="ficha__fila">
+                <span class="ficha__clave">Año</span>
+                <span class="ficha__valor">{{ ficha.anio }}</span>
+              </div>
+              <div class="ficha__fila">
+                <span class="ficha__clave">Género</span>
+                <span class="ficha__valor">{{ ficha.genero }}</span>
+              </div>
+              <div class="ficha__fila">
+                <span class="ficha__clave">Calificación</span>
+                <span class="ficha__valor">{{ ficha.calificacion !== null ? ficha.calificacion + ' / 100' : '—' }}</span>
+              </div>
+              <div class="ficha__fila">
+                <span class="ficha__clave">Precio</span>
+                <span class="ficha__valor">{{ f.precio(ficha.precio) }}</span>
+              </div>
+              <div class="ficha__fila">
+                <span class="ficha__clave">Estudio</span>
+                <span class="ficha__valor">{{ ficha.estudio ? ficha.estudio.nombre : '—' }}</span>
+              </div>
+              <div class="ficha__fila">
+                <span class="ficha__clave">Plataforma</span>
+                <span class="ficha__valor">{{ ficha.plataforma ? ficha.plataforma.nombre : '—' }}</span>
+              </div>
+              <div class="ficha__fila">
+                <span class="ficha__clave">Añadido</span>
+                <span class="ficha__valor">{{ f.fecha(ficha.creado_en) }}</span>
+              </div>
+              <div class="ficha__fila" v-if="ficha.actualizado_en">
+                <span class="ficha__clave">Editado</span>
+                <span class="ficha__valor">{{ f.fecha(ficha.actualizado_en) }}</span>
+              </div>
+            </div>
+
+            <!-- Navegación entre entidades -->
+            <div style="display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1.2rem">
+              <a v-if="ficha.estudio" class="salto" :href="'estudios.html?id=' + ficha.estudio.id">
+                Ver estudio: {{ ficha.estudio.nombre }} →
+              </a>
+              <a v-if="ficha.plataforma" class="salto" :href="'plataformas.html?id=' + ficha.plataforma.id">
+                Ver plataforma: {{ ficha.plataforma.nombre }} →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dialogo__pie">
+        <button v-if="sesion.autenticado" class="boton" @click="abrirEdicion(ficha)">Editar</button>
+        <button v-if="sesion.admin" class="boton boton--peligro" @click="pedirBorrado(ficha)">Eliminar</button>
+        <button class="boton boton--fantasma separa" @click="ficha = null">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------------------------------------------------------- -->
+  <!--  Formulario de alta y edición                               -->
+  <!-- ---------------------------------------------------------- -->
+  <div class="capa" v-if="formularioAbierto" @click.self="cerrarFormulario">
+    <div class="dialogo" role="dialog" aria-modal="true">
+      <div class="dialogo__cabecera">
+        <div>
+          <p class="dialogo__sub">{{ editandoId ? 'PUT /api/juegos/' + editandoId : 'POST /api/juegos' }}</p>
+          <h2 class="dialogo__titulo">{{ editandoId ? 'Editar juego' : 'Nuevo juego' }}</h2>
+        </div>
+        <button class="cerrar" @click="cerrarFormulario" aria-label="Cerrar formulario">✕</button>
+      </div>
+
+      <div class="dialogo__cuerpo">
+        <div class="alerta" v-if="errores.length">
+          <strong>No se pudo guardar.</strong>
+          <ul><li v-for="(e, i) in errores" :key="i">{{ e }}</li></ul>
+        </div>
+
+        <div class="formulario">
+          <div class="ancho-total">
+            <label class="etiqueta" for="c-titulo">Título <i>*</i></label>
+            <input id="c-titulo" class="campo" v-model="formulario.titulo" maxlength="160" placeholder="Elden Ring">
+          </div>
+
+          <div>
+            <label class="etiqueta" for="c-anio">Año de lanzamiento <i>*</i></label>
+            <input id="c-anio" class="campo" type="number" v-model="formulario.anio" min="1958" max="2100" placeholder="2022">
+          </div>
+
+          <div>
+            <label class="etiqueta" for="c-genero">Género <i>*</i></label>
+            <input id="c-genero" class="campo" v-model="formulario.genero" list="lista-generos" placeholder="RPG de acción">
+            <datalist id="lista-generos">
+              <option v-for="g in generos" :key="g" :value="g"></option>
+            </datalist>
+          </div>
+
+          <div>
+            <label class="etiqueta" for="c-calificacion">Calificación (0–100)</label>
+            <input id="c-calificacion" class="campo" type="number" v-model="formulario.calificacion" min="0" max="100" placeholder="96">
+          </div>
+
+          <div>
+            <label class="etiqueta" for="c-precio">Precio en USD</label>
+            <input id="c-precio" class="campo" type="number" step="0.01" v-model="formulario.precio" min="0" placeholder="59.99">
+          </div>
+
+          <div>
+            <label class="etiqueta" for="c-estudio">Estudio</label>
+            <select id="c-estudio" class="campo" v-model="formulario.estudio_id">
+              <option value="">Sin asignar</option>
+              <option v-for="e in estudios" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="etiqueta" for="c-plataforma">Plataforma</label>
+            <select id="c-plataforma" class="campo" v-model="formulario.plataforma_id">
+              <option value="">Sin asignar</option>
+              <option v-for="p in plataformas" :key="p.id" :value="p.id">{{ p.nombre }}</option>
+            </select>
+          </div>
+
+          <div class="ancho-total">
+            <label class="etiqueta" for="c-imagen">Ruta de la imagen</label>
+            <input id="c-imagen" class="campo" v-model="formulario.imagen" placeholder="/img/juegos/8.svg">
+            <p class="ayuda">Acepta una ruta del propio sitio o una dirección web completa.</p>
+          </div>
+
+          <div class="ancho-total">
+            <label class="etiqueta" for="c-descripcion">Descripción</label>
+            <textarea id="c-descripcion" class="campo" v-model="formulario.descripcion" maxlength="2000"
+                      placeholder="Una o dos frases sobre qué hace especial a este juego."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="dialogo__pie">
+        <button class="boton boton--solido" :disabled="guardando" @click="guardar">
+          {{ guardando ? 'Guardando…' : (editandoId ? 'Guardar cambios' : 'Crear juego') }}
+        </button>
+        <button class="boton boton--fantasma separa" @click="cerrarFormulario">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------------------------------------------------------- -->
+  <!--  Confirmación de borrado                                    -->
+  <!-- ---------------------------------------------------------- -->
+  <div class="capa" v-if="porBorrar" @click.self="porBorrar = null">
+    <div class="dialogo" style="width:min(480px,100%)" role="alertdialog" aria-modal="true">
+      <div class="dialogo__cabecera">
+        <div>
+          <p class="dialogo__sub">DELETE /api/juegos/{{ porBorrar.id }}</p>
+          <h2 class="dialogo__titulo">Eliminar juego</h2>
+        </div>
+      </div>
+      <div class="dialogo__cuerpo">
+        <p style="margin:0">Se borrará <strong>{{ porBorrar.titulo }}</strong> del catálogo. Esta acción no se puede deshacer.</p>
+      </div>
+      <div class="dialogo__pie">
+        <button class="boton boton--peligro" :disabled="guardando" @click="confirmarBorrado">
+          {{ guardando ? 'Eliminando…' : 'Sí, eliminar' }}
+        </button>
+        <button class="boton boton--fantasma separa" @click="porBorrar = null">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="pie">
+  <div class="envoltura pie__contenido">
+    <span>Entidad principal · juegos</span>
+    <span>18 registros iniciales</span>
+    <a class="separa" href="/api/juegos" target="_blank" rel="noopener">Ver la respuesta JSON →</a>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>window.Vue || document.write('<script src="/js/vendor/vue.global.prod.js"><\/script>');</script>
+<script src="/js/comun.js"></script>
+<script src="/js/juegos.js"></script>
+</body>
+</html>

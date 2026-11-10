@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Registro de usuarios del catálogo de videojuegos.">
+<title>Crear cuenta · Catálogo de Videojuegos</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23040504'/%3E%3Cpath d='M4 4h24v18l-8 8H4z' fill='%2376b900'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+
+<header class="cabecera">
+  <div class="envoltura cabecera__barra">
+    <a class="marca" href="/index.html">
+      <span class="marca__glifo">▶</span>
+      <span class="marca__texto">Catálogo<span>Videojuegos</span></span>
+    </a>
+    <button class="menu-boton" aria-label="Abrir menú"><span></span><span></span><span></span></button>
+    <nav class="nav">
+      <a href="index.html">Inicio</a>
+      <a href="juegos.html">Juegos</a>
+      <a href="estudios.html">Estudios</a>
+      <a href="plataformas.html">Plataformas</a>
+      <a href="/api" target="_blank" rel="noopener">API</a>
+    </nav>
+  </div>
+</header>
+
+<main id="app" class="envoltura acceso" v-cloak>
+  <div class="acceso__tarjeta aparece">
+    <p class="etiqueta-seccion">POST /api/auth/registro</p>
+    <h1>Crear cuenta</h1>
+    <p class="texto-tenue" style="margin:0">Con una cuenta puedes crear y editar registros. Borrar está reservado al administrador.</p>
+
+    <form @submit.prevent="enviar" novalidate>
+      <div class="alerta" v-if="errores.length">
+        <strong>No se pudo crear la cuenta.</strong>
+        <ul><li v-for="(e, i) in errores" :key="i">{{ e }}</li></ul>
+      </div>
+      <div>
+        <label class="etiqueta" for="nombre">Nombre <i>*</i></label>
+        <input id="nombre" class="campo" v-model.trim="nombre" maxlength="80" autocomplete="name" placeholder="Tu nombre" autofocus>
+      </div>
+      <div>
+        <label class="etiqueta" for="correo">Correo <i>*</i></label>
+        <input id="correo" class="campo" type="email" v-model.trim="correo" autocomplete="email" placeholder="tu@correo.com">
+      </div>
+      <div>
+        <label class="etiqueta" for="clave">Contraseña <i>*</i></label>
+        <input id="clave" class="campo" type="password" v-model="clave" autocomplete="new-password" placeholder="Mínimo 8 caracteres">
+      </div>
+      <div>
+        <label class="etiqueta" for="clave2">Repite la contraseña <i>*</i></label>
+        <input id="clave2" class="campo" type="password" v-model="clave2" autocomplete="new-password">
+      </div>
+      <button class="boton boton--solido" type="submit" :disabled="enviando">{{ enviando ? 'Creando…' : 'Crear cuenta' }}</button>
+    </form>
+
+    <p class="acceso__pie">¿Ya tienes cuenta? <a :href="'login.html' + sufijo">Inicia sesión</a></p>
+  </div>
+</main>
+
+<footer class="pie">
+  <div class="envoltura pie__contenido">
+    <span>Autenticación con JSON Web Tokens</span>
+    <span>Contraseñas con bcrypt · Token con expiración</span>
+    <a class="separa" href="/api" target="_blank" rel="noopener">Documentación de la API →</a>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>window.Vue || document.write('<script src="/js/vendor/vue.global.prod.js"><\/script>');</script>
+<script src="/js/comun.js"></script>
+<script src="/js/acceso.js"></script>
+<script>
+Vue.createApp({
+  data() {
+    return { nombre: '', correo: '', clave: '', clave2: '', errores: [], enviando: false, sufijo: location.search };
+  },
+  methods: {
+    validar() {
+      const fallos = [];
+      if (this.nombre.length < 2) fallos.push('El nombre debe tener al menos 2 caracteres.');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.correo)) fallos.push('El correo no tiene un formato válido.');
+      if (this.clave.length < 8) fallos.push('La contraseña debe tener al menos 8 caracteres.');
+      if (this.clave !== this.clave2) fallos.push('Las contraseñas no coinciden.');
+      return fallos;
+    },
+    async enviar() {
+      this.errores = this.validar();
+      if (this.errores.length) return;
+      this.enviando = true;
+      try {
+        const respuesta = await API.registro(this.nombre, this.correo, this.clave);
+        Sesion.guardar(respuesta);                 // el registro ya devuelve un JWT
+        avisar(`Cuenta creada. Rol: ${respuesta.usuario.rol}.`);
+        setTimeout(() => location.assign(destinoTrasAcceso()), 700);
+      } catch (e) {
+        this.errores = e.detalles?.length ? e.detalles : [e.message];
+      } finally {
+        this.enviando = false;
+      }
+    },
+  },
+}).mount('#app');
+</script>
+</body>
+</html>

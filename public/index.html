@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Catálogo temático de videojuegos: servicio REST sobre Netlify Functions y Redis Cloud, con autenticación JWT y frontend en Vue.js.">
+<title>Catálogo de Videojuegos</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23040504'/%3E%3Cpath d='M4 4h24v18l-8 8H4z' fill='%2376b900'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+
+<header class="cabecera">
+  <div class="envoltura cabecera__barra">
+    <a class="marca" href="/index.html">
+      <span class="marca__glifo">▶</span>
+      <span class="marca__texto">Catálogo<span>Videojuegos</span></span>
+    </a>
+    <button class="menu-boton" aria-label="Abrir menú"><span></span><span></span><span></span></button>
+    <nav class="nav">
+      <a href="index.html">Inicio</a>
+      <a href="juegos.html">Juegos</a>
+      <a href="estudios.html">Estudios</a>
+      <a href="plataformas.html">Plataformas</a>
+      <a href="/api" target="_blank" rel="noopener">API</a>
+    </nav>
+  </div>
+</header>
+
+<main id="app" v-cloak>
+
+  <!-- Portada -->
+  <section class="envoltura portada">
+    <p class="etiqueta-seccion">Netlify Functions · Redis Cloud · JWT · Vue.js</p>
+    <h1>Un catálogo<br>de <em>videojuegos</em><br>sin servidor</h1>
+    <p>
+      Dieciocho juegos, seis estudios y seis plataformas conectados entre sí.
+      Cualquiera puede consultarlos; para crear y editar hay que iniciar sesión,
+      y sólo un administrador puede borrar. Los datos viven en Redis Cloud y el
+      servicio REST corre como funciones serverless de Netlify.
+    </p>
+
+    <div style="display:flex;flex-wrap:wrap;gap:.85rem">
+      <a class="boton boton--solido" href="juegos.html">Explorar el catálogo</a>
+      <a class="boton" href="/api" target="_blank" rel="noopener">Ver la API</a>
+    </div>
+
+    <!-- Métricas en vivo desde /api/estadisticas -->
+    <div class="metricas">
+      <div class="metrica">
+        <div class="metrica__valor">{{ cargando ? '··' : datos.juegos }}</div>
+        <div class="metrica__nombre">Juegos</div>
+      </div>
+      <div class="metrica">
+        <div class="metrica__valor">{{ cargando ? '··' : datos.estudios }}</div>
+        <div class="metrica__nombre">Estudios</div>
+      </div>
+      <div class="metrica">
+        <div class="metrica__valor">{{ cargando ? '··' : datos.plataformas }}</div>
+        <div class="metrica__nombre">Plataformas</div>
+      </div>
+      <div class="metrica">
+        <div class="metrica__valor">{{ cargando ? '··' : datos.calificacion_media }}</div>
+        <div class="metrica__nombre">Nota media</div>
+      </div>
+      <div class="metrica">
+        <div class="metrica__valor">{{ cargando ? '··' : rango }}</div>
+        <div class="metrica__nombre">Años cubiertos</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mejor valorados -->
+  <section class="envoltura seccion">
+    <div class="fila-titulo">
+      <div>
+        <p class="etiqueta-seccion">Los tres mejor valorados</p>
+        <h2 class="titulo-seccion">Destacados</h2>
+      </div>
+      <a class="boton boton--fantasma separa" href="juegos.html">Ver todos</a>
+    </div>
+
+    <div class="rejilla">
+      <template v-if="cargando">
+        <div class="esqueleto" v-for="n in 3" :key="n">
+          <div class="esqueleto__bloque"></div>
+          <div class="esqueleto__linea"></div>
+          <div class="esqueleto__linea"></div>
+        </div>
+      </template>
+
+      <a v-else v-for="(j, i) in datos.destacados" :key="j.id"
+         class="tarjeta aparece" :style="{ animationDelay: (i * 90) + 'ms' }"
+         :href="'juegos.html?id=' + j.id">
+        <div class="tarjeta__lienzo">
+          <img :src="j.imagen" :alt="j.titulo" loading="lazy" @error="imagenAlterna($event, j.titulo)">
+          <span class="tarjeta__nota">{{ j.calificacion }}</span>
+        </div>
+        <div class="tarjeta__cuerpo">
+          <h3 class="tarjeta__titulo">{{ j.titulo }}</h3>
+          <div class="tarjeta__meta">
+            <span>{{ j.anio }}</span>
+            <span>{{ j.genero }}</span>
+          </div>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- Reparto por género -->
+  <section class="envoltura seccion" v-if="!cargando && datos.generos && datos.generos.length">
+    <div class="fila-titulo">
+      <div>
+        <p class="etiqueta-seccion">Distribución del catálogo</p>
+        <h2 class="titulo-seccion">Géneros</h2>
+      </div>
+    </div>
+    <div class="ficha" style="border-top:none">
+      <a class="ficha__fila" v-for="g in datos.generos" :key="g.genero"
+         :href="'juegos.html?genero=' + encodeURIComponent(g.genero)"
+         style="text-decoration:none;color:inherit">
+        <span class="ficha__clave">{{ g.genero }}</span>
+        <span class="ficha__valor" style="display:flex;align-items:center;gap:.8rem;min-width:190px">
+          <span style="flex:1;height:5px;background:#111;display:block">
+            <span :style="{ width: (g.n / maxGenero * 100) + '%' }"
+                  style="display:block;height:100%;background:linear-gradient(90deg,#76b900,#c6ff00);transition:width .8s cubic-bezier(.22,1,.36,1)"></span>
+          </span>
+          <b style="font-family:var(--mono);color:var(--verde-alto)">{{ g.n }}</b>
+        </span>
+      </a>
+    </div>
+  </section>
+
+  <!-- Referencia de la API -->
+  <section class="envoltura seccion">
+    <div class="fila-titulo">
+      <div>
+        <p class="etiqueta-seccion">Convención RESTful</p>
+        <h2 class="titulo-seccion">Operaciones del servicio</h2>
+      </div>
+    </div>
+    <div class="consola">
+      <div><span class="verbo">GET</span><span class="ruta">/api/juegos</span> <span class="nota">— lista con búsqueda, filtros, orden y paginación</span></div>
+      <div><span class="verbo">GET</span><span class="ruta">/api/juegos/:id</span> <span class="nota">— registro individual con sus relaciones resueltas</span></div>
+      <div><span class="verbo">POST</span><span class="ruta">/api/juegos</span> <span class="nota">— crea un registro y devuelve 201 con cabecera Location</span></div>
+      <div><span class="verbo">PUT</span><span class="ruta">/api/juegos/:id</span> <span class="nota">— reemplaza el registro completo</span></div>
+      <div><span class="verbo">PATCH</span><span class="ruta">/api/juegos/:id</span> <span class="nota">— modifica sólo los campos enviados</span></div>
+      <div><span class="verbo">DELETE</span><span class="ruta">/api/juegos/:id</span> <span class="nota">— elimina el registro y responde 204</span></div>
+      <div style="opacity:.35">&nbsp;</div>
+      <div><span class="verbo">GET</span><span class="ruta">/api/estudios/:id/juegos</span> <span class="nota">— navegación desde el estudio a sus juegos</span></div>
+      <div><span class="verbo">GET</span><span class="ruta">/api/plataformas/:id/juegos</span> <span class="nota">— navegación desde la plataforma a sus juegos</span></div>
+      <div><span class="verbo">GET</span><span class="ruta">/api/estadisticas</span> <span class="nota">— resumen agregado del catálogo</span></div>
+      <div style="opacity:.35">&nbsp;</div>
+      <div><span class="verbo">POST</span><span class="ruta">/api/auth/registro</span> <span class="nota">— crea una cuenta (contraseña guardada con bcrypt)</span></div>
+      <div><span class="verbo">POST</span><span class="ruta">/api/auth/login</span> <span class="nota">— valida credenciales y devuelve un JWT firmado</span></div>
+      <div><span class="verbo">GET</span><span class="ruta">/api/auth/yo</span> <span class="nota">— datos del usuario del token</span></div>
+    </div>
+    <p class="ayuda">Las mismas seis operaciones existen para <code>/api/estudios</code> y <code>/api/plataformas</code>.
+      Las consultas son públicas; <code>POST</code>, <code>PUT</code> y <code>PATCH</code> requieren
+      <code>Authorization: Bearer &lt;token&gt;</code> (401 si falta o expiró) y <code>DELETE</code> requiere rol
+      <code>admin</code> (403 si no lo tiene).</p>
+  </section>
+</main>
+
+<footer class="pie">
+  <div class="envoltura pie__contenido">
+    <span>Proyecto 2 · Catálogos temáticos</span>
+    <span>Netlify Functions + Redis Cloud + JWT + Vue.js</span>
+    <a class="separa" href="/api" target="_blank" rel="noopener">Documentación de la API →</a>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>window.Vue || document.write('<script src="/js/vendor/vue.global.prod.js"><\/script>');</script>
+<script src="/js/comun.js"></script>
+<script>
+Vue.createApp({
+  data() {
+    return {
+      cargando: true,
+      datos: { juegos: 0, estudios: 0, plataformas: 0, calificacion_media: 0, generos: [], destacados: [], rango_anios: {} },
+    };
+  },
+  computed: {
+    rango() {
+      const r = this.datos.rango_anios || {};
+      return r.desde ? `${r.desde}–${r.hasta}` : '—';
+    },
+    maxGenero() {
+      return Math.max(1, ...(this.datos.generos || []).map((g) => g.n));
+    },
+  },
+  methods: {
+    imagenAlterna,
+    async cargar() {
+      try {
+        this.datos = await API.estadisticas();
+      } catch (e) {
+        avisar(e.message, 'error');
+      } finally {
+        this.cargando = false;
+      }
+    },
+  },
+  mounted() { this.cargar(); },
+}).mount('#app');
+</script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+# =====================================================================
+#  Catálogo de Videojuegos — configuración de Netlify
+# =====================================================================
+
+[build]
+  # El frontend en Vue.js no necesita compilación: se publica tal cual.
+  publish = "public"
+  # Carpeta de las funciones serverless (el servicio REST).
+  functions = "netlify/functions"
+  command = "echo 'Sin paso de compilación'"
+
+[functions]
+  node_bundler = "esbuild"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# ---------------------------------------------------------------------
+#  Rutas del servicio REST
+#
+#  Cada función declara su ruta pública en  export const config = { path }
+#  (por ejemplo /api/juegos y /api/juegos/*), así que /api/* llega a la
+#  función correspondiente sin pasar por /.netlify/functions/...
+#
+#    /api                 -> netlify/functions/api.mjs
+#    /api/juegos/*        -> netlify/functions/juegos.mjs
+#    /api/estudios/*      -> netlify/functions/estudios.mjs
+#    /api/plataformas/*   -> netlify/functions/plataformas.mjs
+#    /api/estadisticas    -> netlify/functions/estadisticas.mjs
+#    /api/auth/*          -> netlify/functions/auth.mjs
+# ---------------------------------------------------------------------
+
+# Cabeceras de seguridad básicas para el frontend.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# ---------------------------------------------------------------------
+#  Variables de entorno (se configuran en el panel de Netlify:
+#  Site configuration -> Environment variables). NO se escriben aquí.
+#
+#    REDIS_URL    cadena de conexión de Redis Cloud
+#    JWT_SECRET   clave secreta para firmar los tokens
+#    JWT_EXPIRA   (opcional) duración del token, por defecto 2h
+# ---------------------------------------------------------------------

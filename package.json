@@ -1,0 +1,20 @@
+{
+  "name": "catalogo-videojuegos",
+  "version": "2.0.0",
+  "description": "Catálogo temático de videojuegos: API REST en Netlify Functions + Redis Cloud con autenticación JWT y frontend en Vue.js",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.6"
+  },
+  "scripts": {
+    "dev": "netlify dev",
+    "seed": "node --env-file=.env scripts/cargar-redis.mjs",
+    "deploy": "netlify deploy --prod"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "redis": "^4.7.0"
+  }
+}

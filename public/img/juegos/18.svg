@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800" role="img" aria-label="Jak and Daxter: El legado de los precursores">
+  <defs>
+    <linearGradient id="f18" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0%" stop-color="#0d1210"/>
+      <stop offset="55%" stop-color="#070908"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+    <radialGradient id="g18" cx="0.78" cy="0.16" r="0.85">
+      <stop offset="0%" stop-color="#C6FF00" stop-opacity="0.42"/>
+      <stop offset="55%" stop-color="#C6FF00" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#C6FF00" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="v18" x1="0" y1="0.45" x2="0" y2="1">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.92"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="600" height="800" fill="url(#f18)"/>
+  <path d="M0 0V800 M40 0V800 M80 0V800 M120 0V800 M160 0V800 M200 0V800 M240 0V800 M280 0V800 M320 0V800 M360 0V800 M400 0V800 M440 0V800 M480 0V800 M520 0V800 M560 0V800 M600 0V800 M0 0H600 M0 40H600 M0 80H600 M0 120H600 M0 160H600 M0 200H600 M0 240H600 M0 280H600 M0 320H600 M0 360H600 M0 400H600 M0 440H600 M0 480H600 M0 520H600 M0 560H600 M0 600H600 M0 640H600 M0 680H600 M0 720H600 M0 760H600 M0 800H600" stroke="#ffffff" stroke-width="1" fill="none" opacity="0.03"/>
+  <rect width="600" height="800" fill="url(#g18)"/>
+  <path d="M-120 185 L204 71 L204 130 L-120 244 Z" fill="#C6FF00" opacity="0.15"/><path d="M410 276 L750 88 L750 147 L410 335 Z" fill="#C6FF00" opacity="0.08"/><path d="M93 152 L388 -104 L388 -65 L93 191 Z" fill="#C6FF00" opacity="0.17"/><path d="M121 332 L581 87 L581 149 L121 394 Z" fill="#C6FF00" opacity="0.13"/><path d="M-68 551 L290 329 L290 401 L-68 623 Z" fill="#C6FF00" opacity="0.15"/>
+
+  <rect width="600" height="800" fill="url(#v18)"/>
+
+  <text x="554" y="682" text-anchor="end" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="250"
+        font-weight="800" fill="#C6FF00" opacity="0.16" letter-spacing="-10">18</text>
+
+  <path d="M0 704 L600 650 L600 654 L0 708 Z" fill="#C6FF00" opacity="0.9"/>
+  <circle cx="46" cy="737" r="5" fill="#C6FF00"/>
+  <path d="M68 737 H554" stroke="#C6FF00" stroke-width="1" opacity="0.32"/>
+
+  <path d="M0 0 H72 L0 72 Z" fill="#C6FF00" opacity="0.9"/>
+</svg>

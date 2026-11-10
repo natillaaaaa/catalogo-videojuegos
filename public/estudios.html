@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Estudios desarrolladores del catálogo: consulta, alta, edición y borrado.">
+<title>Estudios · Catálogo de Videojuegos</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23040504'/%3E%3Cpath d='M4 4h24v18l-8 8H4z' fill='%2376b900'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+
+<header class="cabecera">
+  <div class="envoltura cabecera__barra">
+    <a class="marca" href="/index.html">
+      <span class="marca__glifo">▶</span>
+      <span class="marca__texto">Catálogo<span>Videojuegos</span></span>
+    </a>
+    <button class="menu-boton" aria-label="Abrir menú"><span></span><span></span><span></span></button>
+    <nav class="nav">
+      <a href="index.html">Inicio</a>
+      <a href="juegos.html">Juegos</a>
+      <a href="estudios.html">Estudios</a>
+      <a href="plataformas.html">Plataformas</a>
+      <a href="/api" target="_blank" rel="noopener">API</a>
+    </nav>
+  </div>
+</header>
+
+<main id="app" class="envoltura" v-cloak>
+
+  <section class="seccion">
+    <div class="fila-titulo">
+      <div>
+        <p class="etiqueta-seccion">Entidad secundaria · /api/estudios</p>
+        <h1 class="titulo-seccion">Estudios</h1>
+        <p class="texto-tenue" style="margin:0;max-width:52ch">
+          Quién firma cada juego. Abre una ficha para ver su catálogo completo.
+        </p>
+      </div>
+      <button v-if="sesion.autenticado" class="boton boton--solido separa" @click="abrirCreacion">+ Nuevo estudio</button>
+      <a v-else class="boton separa" href="login.html">Inicia sesión para editar</a>
+    </div>
+
+    <div class="herramientas">
+      <div class="buscador">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+        </svg>
+        <input class="campo" type="search" v-model="filtros.buscar" @input="buscarConRetardo"
+               placeholder="Buscar por nombre, país o fundador" aria-label="Buscar estudios">
+      </div>
+
+      <div class="selector">
+        <select class="campo" v-model="orden" @change="recargar" aria-label="Ordenar">
+          <option value="nombre:asc">Nombre A–Z</option>
+          <option value="anio_fundacion:asc">Más antiguos</option>
+          <option value="anio_fundacion:desc">Más recientes</option>
+          <option value="pais:asc">País</option>
+        </select>
+      </div>
+
+      <button v-if="filtros.buscar" class="boton boton--fantasma boton--pequeno" @click="limpiarFiltros">Limpiar</button>
+      <p class="contador"><b>{{ total }}</b> estudio{{ total === 1 ? '' : 's' }}</p>
+    </div>
+
+    <div class="rejilla rejilla--ancha">
+      <template v-if="cargando">
+        <div class="esqueleto" v-for="n in 6" :key="'e' + n">
+          <div class="esqueleto__bloque" style="aspect-ratio:16/10"></div>
+          <div class="esqueleto__linea"></div>
+          <div class="esqueleto__linea"></div>
+        </div>
+      </template>
+
+      <div v-else-if="!registros.length" class="vacio">
+        <h3>Sin resultados</h3>
+        <p v-if="filtros.buscar">Ningún estudio coincide con la búsqueda.</p>
+        <p v-else>Todavía no hay estudios registrados.</p>
+        <button v-if="filtros.buscar" class="boton" @click="limpiarFiltros">Quitar la búsqueda</button>
+        <button v-else-if="sesion.autenticado" class="boton boton--solido" @click="abrirCreacion">+ Nuevo estudio</button>
+      </div>
+
+      <article v-else v-for="(r, i) in registros" :key="r.id"
+               class="tarjeta tarjeta--horizontal aparece" :style="{ animationDelay: Math.min(i,12) * 65 + 'ms' }"
+               tabindex="0" role="button" :aria-label="'Ver ficha de ' + r.nombre"
+               @click="verFicha(r)" @keydown.enter="verFicha(r)">
+        <div class="tarjeta__lienzo">
+          <img :src="r.imagen || ''" :alt="r.nombre" loading="lazy" @error="imagenAlterna($event, r.nombre)">
+        </div>
+        <div class="tarjeta__cuerpo">
+          <h3 class="tarjeta__titulo">{{ r.nombre }}</h3>
+          <div class="tarjeta__meta">
+            <span>{{ r.pais }}</span>
+            <span>Desde {{ r.anio_fundacion }}</span>
+          </div>
+          <div class="tarjeta__meta" style="margin-top:.55rem">
+            <span class="insignia">{{ (conteos[r.id] ?? '·') }} juegos</span>
+            <span class="insignia insignia--neutra" v-if="r.fundador">{{ r.fundador }}</span>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <div class="paginacion" v-if="paginas > 1">
+      <button class="boton boton--fantasma boton--pequeno" :disabled="pagina <= 1" @click="irA(pagina - 1)">← Anterior</button>
+      <span>Página {{ pagina }} de {{ paginas }}</span>
+      <button class="boton boton--fantasma boton--pequeno" :disabled="pagina >= paginas" @click="irA(pagina + 1)">Siguiente →</button>
+    </div>
+  </section>
+
+  <!-- Ficha -->
+  <div class="capa" v-if="ficha" @click.self="cerrarFicha">
+    <div class="dialogo dialogo--ancho" role="dialog" aria-modal="true">
+      <div class="dialogo__cabecera">
+        <div>
+          <p class="dialogo__sub">Estudio · id {{ ficha.id }}</p>
+          <h2 class="dialogo__titulo">{{ ficha.nombre }}</h2>
+        </div>
+        <button class="cerrar" @click="cerrarFicha" aria-label="Cerrar ficha">✕</button>
+      </div>
+
+      <div class="dialogo__cuerpo">
+        <div class="detalle">
+          <div>
+            <img class="detalle__imagen" :src="ficha.imagen || ''" :alt="ficha.nombre"
+                 style="aspect-ratio:16/10;object-fit:cover" @error="imagenAlterna($event, ficha.nombre)">
+          </div>
+          <div>
+            <p class="texto">{{ ficha.descripcion || 'Este estudio todavía no tiene descripción.' }}</p>
+            <div class="ficha">
+              <div class="ficha__fila">
+                <span class="ficha__clave">País</span><span class="ficha__valor">{{ ficha.pais }}</span>
+              </div>
+              <div class="ficha__fila">
+                <span class="ficha__clave">Fundación</span><span class="ficha__valor">{{ ficha.anio_fundacion }}</span>
+              </div>
+              <div class="ficha__fila">
+                <span class="ficha__clave">Fundador</span><span class="ficha__valor">{{ f.texto(ficha.fundador) }}</span>
+              </div>
+              <div class="ficha__fila" v-if="ficha.sitio_web">
+                <span class="ficha__clave">Sitio web</span>
+                <span class="ficha__valor"><a :href="ficha.sitio_web" target="_blank" rel="noopener">Abrir →</a></span>
+              </div>
+              <div class="ficha__fila">
+                <span class="ficha__clave">Juegos</span><span class="ficha__valor">{{ relacionados.length }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navegación a la entidad principal -->
+        <div style="margin-top:2rem">
+          <p class="etiqueta-seccion" style="margin-bottom:.9rem">GET /api/estudios/{{ ficha.id }}/juegos</p>
+          <div class="rejilla" v-if="relacionados.length">
+            <a v-for="j in relacionados" :key="j.id" class="tarjeta" :href="'juegos.html?id=' + j.id">
+              <div class="tarjeta__lienzo">
+                <img :src="j.imagen || ''" :alt="j.titulo" loading="lazy" @error="imagenAlterna($event, j.titulo)">
+                <span v-if="j.calificacion !== null" class="tarjeta__nota">{{ j.calificacion }}</span>
+              </div>
+              <div class="tarjeta__cuerpo">
+                <h4 class="tarjeta__titulo" style="font-size:.92rem">{{ j.titulo }}</h4>
+                <div class="tarjeta__meta"><span>{{ j.anio }}</span></div>
+              </div>
+            </a>
+          </div>
+          <p class="texto-tenue" v-else-if="!cargandoRelacionados">Este estudio no tiene juegos asociados en el catálogo.</p>
+          <p class="texto-tenue" v-else>Cargando juegos…</p>
+        </div>
+      </div>
+
+      <div class="dialogo__pie">
+        <a class="boton" :href="'juegos.html?estudio=' + ficha.id">Filtrar juegos por este estudio</a>
+        <button v-if="sesion.autenticado" class="boton" @click="abrirEdicion(ficha)">Editar</button>
+        <button v-if="sesion.admin" class="boton boton--peligro" @click="pedirBorrado(ficha)">Eliminar</button>
+        <button class="boton boton--fantasma separa" @click="cerrarFicha">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulario -->
+  <div class="capa" v-if="formularioAbierto" @click.self="cerrarFormulario">
+    <div class="dialogo" role="dialog" aria-modal="true">
+      <div class="dialogo__cabecera">
+        <div>
+          <p class="dialogo__sub">{{ editandoId ? 'PUT /api/estudios/' + editandoId : 'POST /api/estudios' }}</p>
+          <h2 class="dialogo__titulo">{{ editandoId ? 'Editar estudio' : 'Nuevo estudio' }}</h2>
+        </div>
+        <button class="cerrar" @click="cerrarFormulario" aria-label="Cerrar formulario">✕</button>
+      </div>
+
+      <div class="dialogo__cuerpo">
+        <div class="alerta" v-if="errores.length">
+          <strong>No se pudo guardar.</strong>
+          <ul><li v-for="(e, i) in errores" :key="i">{{ e }}</li></ul>
+        </div>
+
+        <div class="formulario">
+          <div class="ancho-total">
+            <label class="etiqueta" for="c-nombre">Nombre <i>*</i></label>
+            <input id="c-nombre" class="campo" v-model="formulario.nombre" maxlength="160" placeholder="FromSoftware">
+          </div>
+          <div>
+            <label class="etiqueta" for="c-pais">País <i>*</i></label>
+            <input id="c-pais" class="campo" v-model="formulario.pais" maxlength="80" placeholder="Japón">
+          </div>
+          <div>
+            <label class="etiqueta" for="c-fundacion">Año de fundación <i>*</i></label>
+            <input id="c-fundacion" class="campo" type="number" v-model="formulario.anio_fundacion" min="1900" max="2100" placeholder="1986">
+          </div>
+          <div>
+            <label class="etiqueta" for="c-fundador">Fundador</label>
+            <input id="c-fundador" class="campo" v-model="formulario.fundador" maxlength="160" placeholder="Naotoshi Zin">
+          </div>
+          <div>
+            <label class="etiqueta" for="c-sitio">Sitio web</label>
+            <input id="c-sitio" class="campo" v-model="formulario.sitio_web" placeholder="https://www.fromsoftware.jp">
+          </div>
+          <div class="ancho-total">
+            <label class="etiqueta" for="c-imagen">Ruta de la imagen</label>
+            <input id="c-imagen" class="campo" v-model="formulario.imagen" placeholder="/img/estudios/3.svg">
+          </div>
+          <div class="ancho-total">
+            <label class="etiqueta" for="c-desc">Descripción</label>
+            <textarea id="c-desc" class="campo" v-model="formulario.descripcion" maxlength="2000"
+                      placeholder="Qué caracteriza a este estudio."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="dialogo__pie">
+        <button class="boton boton--solido" :disabled="guardando" @click="guardar">
+          {{ guardando ? 'Guardando…' : (editandoId ? 'Guardar cambios' : 'Crear estudio') }}
+        </button>
+        <button class="boton boton--fantasma separa" @click="cerrarFormulario">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Borrado -->
+  <div class="capa" v-if="porBorrar" @click.self="porBorrar = null">
+    <div class="dialogo" style="width:min(480px,100%)" role="alertdialog" aria-modal="true">
+      <div class="dialogo__cabecera">
+        <div>
+          <p class="dialogo__sub">DELETE /api/estudios/{{ porBorrar.id }}</p>
+          <h2 class="dialogo__titulo">Eliminar estudio</h2>
+        </div>
+      </div>
+      <div class="dialogo__cuerpo">
+        <p style="margin:0">
+          Se borrará <strong>{{ porBorrar.nombre }}</strong>. Sus juegos permanecen en el catálogo,
+          pero quedarán sin estudio asignado.
+        </p>
+      </div>
+      <div class="dialogo__pie">
+        <button class="boton boton--peligro" :disabled="guardando" @click="confirmarBorrado">
+          {{ guardando ? 'Eliminando…' : 'Sí, eliminar' }}
+        </button>
+        <button class="boton boton--fantasma separa" @click="porBorrar = null">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="pie">
+  <div class="envoltura pie__contenido">
+    <span>Entidad secundaria · estudios</span>
+    <span>6 registros iniciales</span>
+    <a class="separa" href="/api/estudios" target="_blank" rel="noopener">Ver la respuesta JSON →</a>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>window.Vue || document.write('<script src="/js/vendor/vue.global.prod.js"><\/script>');</script>
+<script src="/js/comun.js"></script>
+<script src="/js/secundaria.js"></script>
+<script src="/js/estudios.js"></script>
+</body>
+</html>

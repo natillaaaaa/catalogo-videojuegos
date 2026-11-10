@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" role="img" aria-label="Rockstar Games">
+  <defs>
+    <linearGradient id="be2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0c110e"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+    <radialGradient id="he2" cx="0.2" cy="0.85" r="0.9">
+      <stop offset="0%" stop-color="#76B900" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#76B900" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="640" height="400" fill="url(#be2)"/>
+  <path d="M0 0V400 M32 0V400 M64 0V400 M96 0V400 M128 0V400 M160 0V400 M192 0V400 M224 0V400 M256 0V400 M288 0V400 M320 0V400 M352 0V400 M384 0V400 M416 0V400 M448 0V400 M480 0V400 M512 0V400 M544 0V400 M576 0V400 M608 0V400 M640 0V400 M0 0H640 M0 32H640 M0 64H640 M0 96H640 M0 128H640 M0 160H640 M0 192H640 M0 224H640 M0 256H640 M0 288H640 M0 320H640 M0 352H640 M0 384H640" stroke="#ffffff" stroke-width="1" fill="none" opacity="0.035"/>
+  <rect width="640" height="400" fill="url(#he2)"/>
+  <rect x="40" y="273" width="10" height="81" fill="#76B900" opacity="0.24"/><rect x="66" y="199" width="10" height="101" fill="#76B900" opacity="0.25"/><rect x="92" y="212" width="10" height="133" fill="#76B900" opacity="0.15"/><rect x="118" y="150" width="10" height="107" fill="#76B900" opacity="0.24"/><rect x="144" y="214" width="10" height="116" fill="#76B900" opacity="0.13"/><rect x="170" y="225" width="10" height="69" fill="#76B900" opacity="0.14"/><rect x="196" y="196" width="10" height="142" fill="#76B900" opacity="0.14"/><rect x="222" y="272" width="10" height="145" fill="#76B900" opacity="0.23"/><rect x="248" y="162" width="10" height="82" fill="#76B900" opacity="0.24"/><rect x="274" y="176" width="10" height="32" fill="#76B900" opacity="0.2"/><rect x="300" y="150" width="10" height="139" fill="#76B900" opacity="0.16"/><rect x="326" y="237" width="10" height="28" fill="#76B900" opacity="0.18"/><rect x="352" y="280" width="10" height="107" fill="#76B900" opacity="0.21"/><rect x="378" y="214" width="10" height="88" fill="#76B900" opacity="0.16"/><rect x="404" y="151" width="10" height="125" fill="#76B900" opacity="0.15"/><rect x="430" y="278" width="10" height="30" fill="#76B900" opacity="0.15"/><rect x="456" y="192" width="10" height="20" fill="#76B900" opacity="0.26"/><rect x="482" y="180" width="10" height="134" fill="#76B900" opacity="0.22"/><rect x="508" y="226" width="10" height="34" fill="#76B900" opacity="0.19"/><rect x="534" y="269" width="10" height="128" fill="#76B900" opacity="0.19"/><rect x="560" y="187" width="10" height="136" fill="#76B900" opacity="0.16"/>
+
+  <path d="M0 336 L640 300 L640 306 L0 342 Z" fill="#76B900" opacity="0.8"/>
+
+  <text x="44" y="252" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="188" font-weight="800"
+        fill="#76B900" letter-spacing="-8" opacity="0.92">RG</text>
+  <circle cx="588" cy="52" r="5" fill="#76B900"/>
+
+  <path d="M640 0 H570 L640 70 Z" fill="#76B900" opacity="0.9"/>
+</svg>
